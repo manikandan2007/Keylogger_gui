@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keylogger Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h1>Keylogger Logs</h1>
+            
+            <div class="logs-container">
+                <pre>{{ logs_data }}</pre>
+            </div>
+            
+            <a href="/" class="btn btn-secondary">Back to Control Panel</a>
+        </div>
+    </div>
+</body>
+</html>
